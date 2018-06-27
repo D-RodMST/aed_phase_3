@@ -541,3 +541,135 @@ unsigned char generatePacketChecksum(std::vector<unsigned char> input)
 
 	return output;
 }
+
+//Packet Parser Program (PPP)
+//All Rights Reserved
+//D_Rod Softworks
+
+
+        //Function Prototypes
+bool Verify( vector<char> &P, char &LSB, char &MSB);
+int Categorize( vector<char> &P, char &FT);
+void ParseAT( vector<char> &P, char SFID, char ATCMMD, char STS, char PV);
+void ParseSMS( vector<char> &P, char PN[], char MSSGE[] );
+void Fail();
+
+ const char DATA = 512;  
+ const char START = '0x7e'; 
+ char Error_Code;
+ 
+        //Frame Types
+ const char RECIEVE_SMS = '0x9f';
+ const char RECIEVE_AT = '0x88';
+
+        //Examine
+ const int Invalid_Response = 0;
+ const int AT_Response = 1;
+ const int SMS_Response = 2;
+
+
+
+int main()
+{
+        //Variables for the Main Program
+    char Length_MSB; 
+    char Length_LSB; 
+    char Store_FrameType;                 //temp
+    char Store_FrameID;
+    char AT_Command;
+    char Status;
+    char Parameter_Value;
+    char CheckSum;
+    
+    char PhoneNumber[DATA];
+    char Message[DATA];
+    
+     vector<char> RecievedData;
+  
+  if(Verify(RecievedData, Length_LSB, Length_MSB))  //Check START
+  {
+    
+    switch(Categorize(RecievedData, Store_FrameType))
+    {
+        case 0:
+        Error_Code = 2;
+        Fail();
+        break;
+        
+        case 1:  //AT_Response
+        ParseAT(RecievedData, Store_FrameID, AT_Command, Status, Parameter_Value);
+        //ValidateChecksum;
+        //DisplayAT();
+        break;
+        
+        case 2:  //SMS_Response
+        ParseSMS(RecievedData, PhoneNumber, Message);
+        //DisplaySMS();
+        break;
+    }
+  }
+  else
+  {
+      Fail();
+  }
+    return 0;
+}
+
+
+
+
+
+
+bool Verify( vector<char> &P, char &Length_LSB, char &Length_MSB)
+{
+    if(P[0] == 'START')
+    {
+        P[1] = Length_MSB;
+        P[2] = Length_LSB;
+        return true; 
+    }
+    else
+    {
+      Error_Code = '1';
+      return false;
+    }    
+}    
+
+int Categorize( vector<char> &P, char &Store_FrameType)
+{
+    P[3] = Store_FrameType;
+    
+    if(Store_FrameType = RECIEVE_AT)
+    { return AT_Response; }
+    if(Store_FrameType = RECIEVE_SMS)
+    { return SMS_Response; }
+    return 0;
+}
+
+
+void ParseAT( vector<char> &P, char SFID, char ATCMMD, char STS, char PV)
+{
+    P[4] = SFID;
+    P[5] = ATCMMD;
+    P[6] = STS;
+    P[7] = PV;
+    return;
+}
+
+void ParseSMS( vector<char> &P, char PN[], char MSSGE[] )
+{
+    int i;
+    int j;
+    int end = (P.back());
+    for( i = 4, j = 0; i < 24; i++, j++)
+    {  PN[j] = P[i];  }
+    for( i = 24, j = 0; i < end; i++, j++)
+    {  MSSGE[j] = P[i];  }
+}
+
+
+void Fail()
+{
+  cout<<"Packet Failed.  Code: "<<Error_Code<<endl;
+  return;
+}
